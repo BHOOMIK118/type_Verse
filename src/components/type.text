@@ -1,0 +1,289 @@
+import React, { useEffect, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import Chart from 'chart.js/auto';
+import {
+  setWPM,
+  setCPM,
+  setMistakes,
+  setIsTyping,
+  setInputValue,
+  resetGame,
+  setText,
+  setGameOver,
+} from "../features/typing/typingSlice";
+
+import { Line } from "react-chartjs-2";
+
+const TypingGame = () => {
+  const dispatch = useDispatch();
+  const {
+    text,
+    wpm,
+    cpm,
+    mistakes,
+    isTyping,
+    inputValue,
+    gameOver,
+  } = useSelector((state) => state.typing);
+
+  const [progress, setProgress] = useState(0); // Progress bar state
+  const [showStats, setShowStats] = useState(false); // Stats visibility
+  const inputRef = useRef(null);
+
+  const wordsArray = `
+   The quick brown fox jumps over the lazy dog. Typing games are a fun way to improve your speed and accuracy.
+   Practice makes perfect, and consistent effort leads to progress. Remember to keep your posture straight and your
+   hands relaxed as you type. Accuracy is more important than speed, so take your time and focus on hitting
+    the right keys. As you get better, your speed will naturally increase cat dog sun fun run jump apple ball red blue
+    green happy fish bird tree car book sky star cloud fast slow small big quick bright night day light love smile laugh
+     play sing dance rain chair table water home paper pencil school grass flower park garden river family hello world friend
+     phone clock cup plate food drink beach shoes house music picture street window travel write read sleep dream energy watch
+      game learn open close sit stand walkstrong smart gentle clever answer people moment pretty nature shadow energy spirit courage
+ reason vision mystery courage planet travel design emotion music wisdom future balance discover journey explore transform inspire
+ imagine potential respect harmony kindness patience trust clarity achievement progress community action courage friendship insight
+  tradition culture improvement invention strategy language.
+  `.trim().split(/\s+/);
+
+  const initializeWords = (wordCount = 10) => {
+    const randomWords = [];
+    for (let i = 0; i < wordCount; i++) {
+      randomWords.push(wordsArray[Math.floor(Math.random() * wordsArray.length)]);
+    }
+    dispatch(setText(randomWords.join(" ")));
+  };
+
+  useEffect(() => {
+    if (progress >= 100) {
+      dispatch(setGameOver(true));
+      dispatch(setIsTyping(false));
+      setShowStats(true);
+      // calculatePerformanceMetrics();
+    }
+  },[progress])
+  
+
+  const handleTyping = (e) => {
+    const input = e.target.value;
+
+    if (!isTyping) {
+      dispatch(setIsTyping(true)); // Start typing on first input
+    }
+
+    const totalChars = text.length;
+    const inputLength = input.length;
+
+    
+    // Progress bar logic
+
+    // Backspace handling
+
+    if (inputLength < inputValue.length) {
+      setProgress(((inputLength - 1) / totalChars) * 100);
+    }
+    else {
+      
+      setProgress(Math.floor((inputLength / totalChars) * 100));
+    }
+    calculatePerformanceMetrics(input)
+    
+    
+    
+   
+
+    // Check correctness
+    const currentChar = text[inputLength - 1];
+    const typedChar = input[inputLength - 1];
+
+    
+
+    if (typedChar === currentChar) {
+      // Correct typing
+      dispatch(setInputValue(input));
+    } else {
+      // Incorrect typing
+      dispatch(setMistakes(mistakes + 1));
+      dispatch(setInputValue(input));
+    }
+
+    
+    // Check for game completion
+    
+    
+  };
+  
+  const calculatePerformanceMetrics = (input) => {
+    const totalChars = text.length;
+    const correctChars = input.split("").filter((char, i) => char === text[i]).length;
+
+    const calculatedWPM = Math.round((correctChars / 5) / (1 / 60));
+    const calculatedCPM = Math.round(correctChars / (1 / 60));
+    const accuracy = Math.round((correctChars / input.length) * 100);
+
+    dispatch(setWPM(calculatedWPM || 0));
+    dispatch(setCPM(calculatedCPM || 0));
+  };
+
+  const handleReset = (wordCount = 10) => {
+    dispatch(resetGame());
+    initializeWords(wordCount);
+    setProgress(0); // Reset progress bar
+    setShowStats(false); // Hide stats on reset
+    if (inputRef.current) {
+      inputRef.current.value = "";
+      inputRef.current.focus();
+    }
+  };
+
+  useEffect(() => {
+    initializeWords();
+    inputRef.current.focus();
+  }, []);
+
+  const chartData = {
+    labels: ["WPM", "CPM", "Mistakes"],
+    datasets: [
+      {
+        label: "Performance Metrics",
+        data: [wpm, cpm, mistakes],
+        backgroundColor: ["#4CAF50", "#2196F3", "#F44336"],
+        borderColor: ["#388E3C", "#1976D2", "#D32F2F"],
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  // const data = {
+  //   labels: ["January", "February", "March", "April", "May", "June"],
+  //   datasets: [
+  //     {
+  //       label: "Sales",
+  //       data: [10, 20, 15, 30, 40, 35],
+  //       borderColor: "rgba(75,192,192,1)",
+  //       backgroundColor: "rgba(75,192,192,0.2)",
+  //       pointBackgroundColor: "rgba(75,192,192,1)",
+  //       pointBorderColor: "#fff",
+  //     },
+  //   ],
+  // };
+
+  const options = {
+    responsive: true,
+    plugins: {
+      legend: {
+        display: true,
+        position: "top",
+      },
+      tooltip: {
+        enabled: true,
+      },
+    },
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: "Months",
+        },
+      },
+      y: {
+        title: {
+          display: true,
+          text: "Sales (in units)",
+        },
+        beginAtZero: true,
+      },
+    },
+  };
+
+  console.log('sfsf0',chartData)
+
+  return (
+    <div className="w-screen mx-auto bg-gradient-to-b from-neutral-900 to-black min-h-screen text-white p-8  items-center">
+      <div className="mb-8">
+        
+        <div className="mx-auto w-full max-w-xl flex flex-wrap items-center justify-center gap-3 bg-neutral-900/50 p-4 rounded-full shadow-lg">
+          <button
+            onClick={() => handleReset(10)}
+            className="bg-neutral-800 hover:bg-neutral-800 hover:border-none text-white px-4 py-2 rounded-full"
+          >
+            10
+          </button>
+          <button
+            onClick={() => handleReset(25)}
+            className="bg-neutral-800 hover:bg-neutral-800 hover:border-none text-white px-4 py-2 rounded-full"
+          >
+            25
+          </button>
+          <button
+            onClick={() => handleReset(50)}
+            className="bg-neutral-800 hover:bg-neutral-800 hover:border-none text-white px-4 py-2 rounded-full"
+          >
+            50
+          </button>
+        </div>
+      </div>
+
+      <div className=" w-3/5 bg-neutral-800  mx-auto rounded-full h-4 overflow-hidden">
+          <div
+            className="h-full bg-green-500"
+            style={{
+              width: `${progress}%`,
+              transition: "width 0.3s ease",
+            }}
+          ></div>
+        </div>
+
+      <div className="relative w-full max-w-xl mx-auto " >
+        {/* Progress Bar */}
+        
+
+        <div className="relative text-2xl leading-relaxed tracking-wide mt-8 bg-transparent p-6 rounded-lg">
+          {text.split("").map((char, index) => {
+            let className = "text-neutral-600";
+            if (index < inputValue.length) {
+              className =
+                inputValue[index] === char ? "text-green-500" : "text-red-500";
+            }
+            return (
+              <span key={index} className={className}>
+                {char}
+              </span>
+            );
+          })}
+          <input
+            ref={inputRef}
+            type="text"
+            value={inputValue}
+            onChange={handleTyping}
+            className="absolute inset-0 opacity-0 focus:outline-none"
+            style={{ color: "transparent", caretColor: "green" }}
+          />
+        </div>
+        
+        <div className="flex justify-center">
+          
+        <button
+          onClick={() => handleReset()}
+          className="bg-green-500 hover:bg-green-600 text-white px-8 py-2 rounded-lg mt-4"
+        >
+          Reset
+          </button>
+          </div>
+        
+        
+        {showStats && (
+          <div className="bg-neutral-800 p-6 mt-8 rounded-lg shadow-md">
+            <h2 className="text-lg font-bold mb-4">Performance Metrics</h2>
+            <Line data={chartData} />
+            {/* <Line data={data} options={options} /> */}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default TypingGame;
+
+
+
+  text: "The quick brown fox jumps over the lazy dog. Typing games are a fun way to improve your speed and accuracy. Practice makes perfect, and consistent effort leads to progress. Remember to keep your posture straight and your hands relaxed as you type. Accuracy is more important than speed, so take your time and focus on hitting the right keys. As you get better, your speed will naturally increase.",
